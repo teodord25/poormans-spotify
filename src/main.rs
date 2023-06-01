@@ -1,10 +1,5 @@
 use anyhow::{Context, Result};
-use std::{
-    io,
-    thread,
-    time::Duration,
-    fs
-};
+use std::{ io, thread, time::Duration, fs };
 use tui::{
     backend::CrosstermBackend,
     widgets::{Widget, Block, Borders},
@@ -19,6 +14,8 @@ use crossterm::{
 
 use serde::Deserialize;
 use reqwest::Error;
+use thirtyfour::prelude::*;
+use tokio;
 
 #[derive(Deserialize, Debug)]
 struct ApiResponse {
@@ -75,8 +72,8 @@ struct Id {
     videoId: String,
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
+
+async fn get_links(word: &str) -> Result<()> {
     let api_key = fs::read_to_string("APIKEY").context("could not read APIKEY")?;
     let search_url = "https://www.googleapis.com/youtube/v3/search";
 
@@ -93,6 +90,34 @@ async fn main() -> Result<()> {
         println!("Title: {}", item.snippet.title);
         println!();
     }
+
+    Ok(())
+}
+
+
+#[tokio::main]
+async fn main() -> Result<()> {
+
+    open_link("JOE").await?;
+
+    Ok(())
+}
+
+
+// default port is 4444, must start selenium server with java -jar selenuimum.jar standaklonne
+// before use
+async fn open_link(link: &str) -> WebDriverResult<()> {
+    let mut caps = DesiredCapabilities::firefox();
+
+    let driver = WebDriver::new("http://localhost:4444", caps).await?;
+
+    driver.goto("https://www.youtube.com/watch?v=dQw4w9WgXcQ").await?;
+
+    // Pause for 5 seconds to let the video load
+    thread::sleep(std::time::Duration::from_secs(5));
+
+    // Navigate to a new URL in the same tab
+    driver.goto("https://www.youtube.com/watch?v=3tmd-ClpJxA").await?;
 
     Ok(())
 }
