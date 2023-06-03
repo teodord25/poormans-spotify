@@ -15,6 +15,7 @@ use crossterm::{
 use serde::Deserialize;
 use reqwest::Error;
 use thirtyfour::prelude::*;
+use thirtyfour::extensions::addons::firefox::FirefoxTools;
 use tokio;
 
 #[derive(Deserialize, Debug)]
@@ -103,13 +104,15 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-
 // default port is 4444, must start selenium server with java -jar selenuimum.jar standaklonne
 // before use
 async fn open_link(link: &str) -> WebDriverResult<()> {
     let mut caps = DesiredCapabilities::firefox();
-
     let driver = WebDriver::new("http://localhost:4444", caps).await?;
+
+    let tools = FirefoxTools::new(driver.handle.clone());
+
+    tools.install_addon("/home/bane/Downloads/ublock_origin-1.49.2.xpi", Some(true)).await.unwrap();
 
     driver.goto("https://www.youtube.com/watch?v=dQw4w9WgXcQ").await?;
 
