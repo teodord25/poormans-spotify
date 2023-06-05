@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use std::{ io, thread, time::Duration, fs };
+use std::{ io, thread, time::Duration, fs, vec };
 use tui::{
     backend::CrosstermBackend,
     widgets::{Widget, Block, Borders},
@@ -95,37 +95,54 @@ async fn get_links(word: &str) -> Result<()> {
     Ok(())
 }
 
+const RICKROLL_URL: &str = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
 
 #[tokio::main]
 async fn main() -> Result<()> {
 
-    open_link("JOE").await?;
+    let driver = start_browser().await?;
+    add_extension(&driver).await?;
 
+    open_link(&driver, RICKROLL_URL).await?;
+    play_current_video(&driver).await?;
+
+    Ok(())
+}
+
+async fn play_current_video(driver: &WebDriver) -> WebDriverResult<()> {
+    let script = r#"
+        var video = document.querySelector("video");
+        if (video) {
+            video.play();
+        }
+    "#;
+    driver.execute(script, vec![]).await?;
+    Ok(())
+}
+
+
+async fn start_browser() -> Result<WebDriver> {
+    let caps = DesiredCapabilities::firefox();
+    let driver = WebDriver::new("http://localhost:4444", caps).await?;
+
+    Ok(driver)
+}
+
+async fn add_extension(driver: &WebDriver) -> Result<()> {
+    let tools = FirefoxTools::new(driver.handle.clone());
+    tools.install_addon("/home/bane/Downloads/ublock_origin-1.49.2.xpi", Some(true)).await.unwrap();
     Ok(())
 }
 
 // default port is 4444, must start selenium server with java -jar selenuimum.jar standaklonne
 // before use
-async fn open_link(link: &str) -> WebDriverResult<()> {
-    let mut caps = DesiredCapabilities::firefox();
-    let driver = WebDriver::new("http://localhost:4444", caps).await?;
-
-    let tools = FirefoxTools::new(driver.handle.clone());
-
-    tools.install_addon("/home/bane/Downloads/ublock_origin-1.49.2.xpi", Some(true)).await.unwrap();
-
-    driver.goto("https://www.youtube.com/watch?v=dQw4w9WgXcQ").await?;
-
-    // Pause for 5 seconds to let the video load
-    thread::sleep(std::time::Duration::from_secs(5));
-
-    // Navigate to a new URL in the same tab
-    driver.goto("https://www.youtube.com/watch?v=3tmd-ClpJxA").await?;
-
+async fn open_link(driver: &WebDriver, link: &str) -> WebDriverResult<()> {
+    driver.goto(link).await?;
+    play_current_video(&driver).await.unwrap();
     Ok(())
 }
 
-fn showTerm() -> Result<()> {
+fn show_term() -> Result<()> {
 
     // setup terminal
     enable_raw_mode()?;
