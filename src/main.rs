@@ -16,6 +16,9 @@ use serde::Deserialize;
 use reqwest::Error;
 use thirtyfour::prelude::*;
 use thirtyfour::extensions::addons::firefox::FirefoxTools;
+use tui::{
+    text::Text,
+};
 use tokio;
 
 #[derive(Deserialize, Debug)]
@@ -97,17 +100,6 @@ async fn get_links(word: &str) -> Result<()> {
 
 const RICKROLL_URL: &str = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
 
-#[tokio::main]
-async fn main() -> Result<()> {
-
-    let driver = start_browser().await?;
-    add_extension(&driver).await?;
-
-    open_link(&driver, RICKROLL_URL).await?;
-    play_current_video(&driver).await?;
-
-    Ok(())
-}
 
 async fn play_current_video(driver: &WebDriver) -> WebDriverResult<()> {
     let script = r#"
@@ -142,27 +134,16 @@ async fn open_link(driver: &WebDriver, link: &str) -> WebDriverResult<()> {
     Ok(())
 }
 
-fn show_term() -> Result<()> {
-
-    // setup terminal
+fn setup_terminal() -> Result<Terminal<CrosstermBackend<io::Stdout>>> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
     let backend = CrosstermBackend::new(stdout);
-    let mut terminal = Terminal::new(backend)?;
+    let terminal = Terminal::new(backend)?;
+    Ok(terminal)
+}
 
-    terminal.draw(|f| {
-        let size = f.size();
-        let block = Block::default()
-            .title("JOE")
-            .borders(Borders::ALL);
-        f.render_widget(block, size);
-
-    })?;
-
-    thread::sleep(std::time::Duration::from_millis(5000));
-
-    // restore terminal
+fn restore_terminal(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()> {
     disable_raw_mode()?;
     execute!(
         terminal.backend_mut(),
@@ -174,3 +155,61 @@ fn show_term() -> Result<()> {
     Ok(())
 }
 
+fn draw_menu(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()> {
+
+    terminal.draw(|f| {
+        let size = f.size();
+        let block = Block::default()
+            .title("Main Menu")
+            .borders(Borders::ALL);
+        f.render_widget(block, size);
+
+
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .margin(1)
+            .constraints(
+                [
+                    Constraint::Percentage(10),
+                    Constraint::Percentage(80),
+                    Constraint::Percentage(10)
+                ].as_ref()
+                )
+            .split(f.size());
+
+        let block = Block::default()
+            .title("Block innit")
+            .borders(Borders::ALL);
+
+        f.render_widget(block, chunks[0]);
+        let block = Block::default()
+            .title("Block again??")
+            .borders(Borders::ALL);
+        f.render_widget(block, chunks[1]);
+
+    })?;
+    Ok(())
+}
+
+
+#[tokio::main]
+async fn main() -> Result<()> {
+
+    let mut terminal = setup_terminal()?;
+    draw_menu(&mut terminal)?;
+
+    // Loop until 'q' is pressed.
+    loop {
+        if crossterm::event::poll(Duration::from_millis(100))? {
+            if let Event::Key(event) = crossterm::event::read()? {
+                if event.code == KeyCode::Char('q') {
+                    break;
+                }
+            }
+        }
+    }
+
+    restore_terminal(&mut terminal)?;
+
+    Ok(())
+}
