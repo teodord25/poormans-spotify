@@ -77,11 +77,10 @@ struct Id {
 }
 
 
-async fn get_links(word: &str) -> Result<()> {
+async fn get_links(query: &str) -> Result<()> {
     let api_key = fs::read_to_string("APIKEY").context("could not read APIKEY")?;
     let search_url = "https://www.googleapis.com/youtube/v3/search";
 
-    let query = "joe";
     let part = "snippet";
     let url = format!("{}?part={}&key={}&q={}", search_url, part, api_key, query);
 
