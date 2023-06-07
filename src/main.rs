@@ -18,6 +18,7 @@ use thirtyfour::prelude::*;
 use thirtyfour::extensions::addons::firefox::FirefoxTools;
 use tui::{
     text::Text,
+    widgets::Paragraph,
 };
 use tokio;
 
@@ -163,28 +164,25 @@ fn draw_menu(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()
             .borders(Borders::ALL);
         f.render_widget(block, size);
 
+        let results_per_page = 5;
+        let result_height = 10;
 
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .margin(1)
             .constraints(
+                vec!
                 [
-                    Constraint::Percentage(10),
-                    Constraint::Percentage(80),
-                    Constraint::Percentage(10)
+                    Constraint::Percentage(result_height); results_per_page
                 ].as_ref()
                 )
             .split(f.size());
 
-        let block = Block::default()
-            .title("Block innit")
-            .borders(Borders::ALL);
-
-        f.render_widget(block, chunks[0]);
-        let block = Block::default()
-            .title("Block again??")
-            .borders(Borders::ALL);
-        f.render_widget(block, chunks[1]);
+        for i in 0..results_per_page {
+            let textyBlock = Paragraph::new("This is some text.")
+                .block(Block::default().title("BRUH").borders(Borders::ALL));
+            f.render_widget(textyBlock, chunks[i]);
+        }
 
     })?;
     Ok(())
