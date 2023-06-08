@@ -5,8 +5,7 @@ use tui::{
     widgets::{Widget, Block, Borders},
     layout::{Constraint, Direction, Layout},
     Terminal
-};
-use crossterm::{
+}; use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
@@ -217,29 +216,49 @@ fn draw_results(
     Ok(())
 }
 
+enum Mode {
+    Normal,
+    Insert,
+}
+
 
 #[tokio::main]
 async fn main() -> Result<()> {
 
     let mut terminal = setup_terminal()?;
     let mut search_input = String::new();
-    let mut response: Option<&ApiResponse> = None;
+    let response: Option<&ApiResponse> = None;
 
     draw_results(&mut terminal, None, &search_input)?;
+    let mut mode = Mode::Normal;
+    let mut selected_result = 0;
+    let mut event_ocurred: bool;
+    let mut event: Event;
 
     // game loop
     loop {
+        event_ocurred = event::poll(Duration::from_millis(100))?;
 
-        // Timeout is required to keep CPU usage low
-        if event::poll(Duration::from_millis(100))? {
-            match event::read()? {
-                Event::Key(key_event) => match key_event.code {
+        if !event_ocurred {
+            continue;
+        }
+
+        // this is stupid
+        match event::read()? {
+            Event::Key(key_event) => match mode {
+                Mode::Normal => match key_event.code {
                     KeyCode::Char('q') => {
                         break;
                     }
-                    KeyCode::Char(c) => {
-                        search_input.push(c);
-                        draw_results(&mut terminal, response, &search_input)?;
+                    KeyCode::Char('i') => {
+                        mode = Mode::Insert;
+                    }
+                    _ => {}
+                }
+
+                Mode::Insert => match key_event.code {
+                    KeyCode::Esc => {
+                        mode = Mode::Normal;
                     }
                     KeyCode::Backspace => {
                         search_input.pop();
@@ -253,10 +272,14 @@ async fn main() -> Result<()> {
 
                         draw_results(&mut terminal, response, &search_input)?;
                     }
+                    KeyCode::Char(c) => {
+                        search_input.push(c);
+                        draw_results(&mut terminal, response, &search_input)?;
+                    }
                     _ => {}
                 }
-                _ => {}
             }
+            _ => {}
         }
     }
 
