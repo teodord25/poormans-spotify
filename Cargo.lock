@@ -755,6 +755,7 @@ dependencies = [
  "crossterm",
  "reqwest",
  "serde",
+ "serde_json",
  "thirtyfour",
  "tokio",
  "tui",

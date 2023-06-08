@@ -11,7 +11,6 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-
 use serde::Deserialize;
 use reqwest::Error;
 use thirtyfour::prelude::*;
@@ -21,6 +20,10 @@ use tui::{
     widgets::Paragraph,
 };
 use tokio;
+
+use std::fs::OpenOptions;
+use std::io::prelude::*;
+
 
 #[derive(Deserialize, Debug)]
 struct ApiResponse {
@@ -78,24 +81,27 @@ struct Id {
 }
 
 
-async fn get_links(query: &str) -> Result<()> {
+fn log_to_file(message: &str) -> std::io::Result<()> {
+    let mut file = OpenOptions::new()
+        .write(true)
+        .append(true)
+        .open("log.txt")?;
+    writeln!(file, "{}", message)
+}
+
+async fn get_links(query: &str) -> Result<ApiResponse> {
     let api_key = fs::read_to_string("APIKEY").context("could not read APIKEY")?;
     let search_url = "https://www.googleapis.com/youtube/v3/search";
 
     let part = "snippet";
-    let url = format!("{}?part={}&key={}&q={}", search_url, part, api_key, query);
+    let item_type = "video";
+    let url = format!("{}?part={}&type={}&key={}&q={}", search_url, part, item_type, api_key, query);
 
     let response = reqwest::get(&url).await?;
 
-    let api_response: ApiResponse = response.json().await?;
+    log_to_file(&format!("{:?}", response))?;
 
-    for item in api_response.items {
-        println!("Video ID: {}", item.id.videoId);
-        println!("Title: {}", item.snippet.title);
-        println!();
-    }
-
-    Ok(())
+    Ok(response.json().await?)
 }
 
 const RICKROLL_URL: &str = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
@@ -155,7 +161,11 @@ fn restore_terminal(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Re
     Ok(())
 }
 
-fn draw_menu(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()> {
+fn draw_results(
+    terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
+    response: Option<&ApiResponse>,
+    search_input: &str
+    ) -> Result<()> {
 
     terminal.draw(|f| {
         let size = f.size();
@@ -173,16 +183,35 @@ fn draw_menu(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()
             .constraints(
                 vec!
                 [
-                    Constraint::Percentage(result_height); results_per_page
+                    Constraint::Percentage(result_height); results_per_page + 1
                 ].as_ref()
                 )
             .split(f.size());
 
-        for i in 0..results_per_page {
-            let textyBlock = Paragraph::new("This is some text.")
-                .block(Block::default().title("BRUH").borders(Borders::ALL));
-            f.render_widget(textyBlock, chunks[i]);
+        // TODO: create pagination
+        if response.is_none() {
+            for i in 0..results_per_page {
+                let result = Paragraph::new("No results found.")
+                    .block(Block::default().title("BRUH").borders(Borders::ALL));
+                f.render_widget(result, chunks[i]);
+            }
+        } else {
+            for i in 0..results_per_page {
+                let response = response.unwrap();
+                let item = response.items.get(i).unwrap();
+                let title = item.snippet.title.clone();
+
+                let result = Paragraph::new(title)
+                    .block(Block::default().title("Result").borders(Borders::ALL));
+                f.render_widget(result, chunks[i]);
+            }
         }
+
+         // Draw search input block
+        let search_block = Paragraph::new(search_input)
+            .block(Block::default().title("Search").borders(Borders::ALL));
+
+        f.render_widget(search_block, chunks[chunks.len() - 1]);
 
     })?;
     Ok(())
@@ -193,15 +222,40 @@ fn draw_menu(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()
 async fn main() -> Result<()> {
 
     let mut terminal = setup_terminal()?;
-    draw_menu(&mut terminal)?;
+    let mut search_input = String::new();
+    let mut response: Option<&ApiResponse> = None;
 
-    // Loop until 'q' is pressed.
+    draw_results(&mut terminal, None, &search_input)?;
+
+    // game loop
     loop {
-        if crossterm::event::poll(Duration::from_millis(100))? {
-            if let Event::Key(event) = crossterm::event::read()? {
-                if event.code == KeyCode::Char('q') {
-                    break;
+
+        // Timeout is required to keep CPU usage low
+        if event::poll(Duration::from_millis(100))? {
+            match event::read()? {
+                Event::Key(key_event) => match key_event.code {
+                    KeyCode::Char('q') => {
+                        break;
+                    }
+                    KeyCode::Char(c) => {
+                        search_input.push(c);
+                        draw_results(&mut terminal, response, &search_input)?;
+                    }
+                    KeyCode::Backspace => {
+                        search_input.pop();
+                        draw_results(&mut terminal, response, &search_input)?;
+                    }
+                    KeyCode::Enter => {
+
+                        // this is stupid
+                        let response = get_links(&search_input).await?;
+                        let response = Some(&response);
+
+                        draw_results(&mut terminal, response, &search_input)?;
+                    }
+                    _ => {}
                 }
+                _ => {}
             }
         }
     }
