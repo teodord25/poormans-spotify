@@ -17,8 +17,9 @@ use thirtyfour::extensions::addons::firefox::FirefoxTools;
 use tui::{
     text::Text,
     widgets::Paragraph,
+    style::{Color, Style},
 };
-use tokio;
+use tokio::{self, select};
 
 use std::fs::OpenOptions;
 use std::io::prelude::*;
@@ -163,7 +164,8 @@ fn restore_terminal(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Re
 fn draw_results(
     terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
     response: Option<&ApiResponse>,
-    search_input: &str
+    search_input: &str,
+    selected_result: i32
     ) -> Result<()> {
 
     terminal.draw(|f| {
@@ -200,8 +202,15 @@ fn draw_results(
                 let item = response.items.get(i).unwrap();
                 let title = item.snippet.title.clone();
 
-                let result = Paragraph::new(title)
+                let style = if i == selected_result as usize && selected_result > -1 {
+                    Style::default().bg(Color::Blue)
+                } else {
+                    Style::default()
+                };
+
+                let result = Paragraph::new(Text::styled(title, style))
                     .block(Block::default().title("Result").borders(Borders::ALL));
+
                 f.render_widget(result, chunks[i]);
             }
         }
@@ -227,11 +236,12 @@ async fn main() -> Result<()> {
 
     let mut terminal = setup_terminal()?;
     let mut search_input = String::new();
-    let response: Option<&ApiResponse> = None;
+    let mut result: ApiResponse;
+    let mut response: Option<&ApiResponse> = None;
 
-    draw_results(&mut terminal, None, &search_input)?;
+    draw_results(&mut terminal, None, &search_input, -1)?;
     let mut mode = Mode::Normal;
-    let mut selected_result = 0;
+    let mut selected_result = -1;
     let mut event_ocurred: bool;
     let mut event: Event;
 
@@ -253,6 +263,16 @@ async fn main() -> Result<()> {
                     KeyCode::Char('i') => {
                         mode = Mode::Insert;
                     }
+                    //down
+                    KeyCode::Char('j') => {
+                        selected_result = (selected_result + 1) % 5;
+                        draw_results(&mut terminal, response, &search_input, selected_result)?;
+                    }
+                    //up
+                    KeyCode::Char('k') => {
+                        selected_result = (selected_result - 1) % 5;
+                        draw_results(&mut terminal, response, &search_input, selected_result)?;
+                    }
                     _ => {}
                 }
 
@@ -262,19 +282,18 @@ async fn main() -> Result<()> {
                     }
                     KeyCode::Backspace => {
                         search_input.pop();
-                        draw_results(&mut terminal, response, &search_input)?;
+                        draw_results(&mut terminal, response, &search_input, selected_result)?;
                     }
                     KeyCode::Enter => {
+                        result = get_links(&search_input).await?;
 
-                        // this is stupid
-                        let response = get_links(&search_input).await?;
-                        let response = Some(&response);
+                        response = Some(&result);
 
-                        draw_results(&mut terminal, response, &search_input)?;
+                        draw_results(&mut terminal, response, &search_input, selected_result)?;
                     }
                     KeyCode::Char(c) => {
                         search_input.push(c);
-                        draw_results(&mut terminal, response, &search_input)?;
+                        draw_results(&mut terminal, response, &search_input, selected_result)?;
                     }
                     _ => {}
                 }
