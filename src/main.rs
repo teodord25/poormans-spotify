@@ -232,18 +232,10 @@ fn draw_results(
                 )
             .split(f.size());
 
-
-
-
-
-
-
-
-        // TODO: create pagination
         if response.is_none() {
             for i in 0..results_per_page {
                 let result = Paragraph::new("No results found.")
-                    .block(Block::default().title("BRUH").borders(Borders::ALL));
+                    .block(Block::default().title("Result").borders(Borders::ALL));
                 f.render_widget(result, chunks[i]);
             }
         } else {
@@ -255,7 +247,6 @@ fn draw_results(
             for i in l..=r {
                 let i = i as usize;
                 let response = response.unwrap();
-                // println!("JOE: {} MAMA: {:?}", i, response.items.len());
                 let item = response.items.get(i).unwrap();
                 let title = item.snippet.title.clone();
 
