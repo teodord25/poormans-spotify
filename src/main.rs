@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use serde_json::ser::PrettyFormatter;
 use std::{ io, thread, time::Duration, fs, vec };
 use tui::{
     backend::CrosstermBackend,
@@ -74,10 +75,53 @@ struct Thumbnail {
     url: String,
 }
 
-
 #[derive(Deserialize, Debug)]
 struct Id {
     videoId: String,
+}
+
+struct SlidingWindow {
+    l: i8,
+    r: i8,
+    len: i8,
+    curr: i8,
+    capacity: i8,
+}
+
+impl SlidingWindow {
+    fn new(l: i8, r: i8, curr: i8, capacity: i8) -> Self {
+        Self { l, r, len: r - l + 1, curr, capacity}
+    }
+
+    fn next(&mut self) {
+        self.curr += 1;
+
+        if self.curr > self.capacity - 1 {
+            self.curr = self.capacity - 1;
+        }
+
+        if self.curr > self.r {
+            self.r = self.curr;
+            self.l = self.r - (self.len - 1);
+        }
+    }
+
+    fn prev(&mut self) {
+        self.curr -= 1;
+
+        if self.curr < 0 {
+            self.curr = 0;
+        }
+
+        if self.curr < self.l {
+            self.l = self.curr;
+            self.r = self.l + (self.len - 1);
+        }
+    }
+
+    fn get_pos(&self) -> i8 {
+        self.curr as i8
+    }
 }
 
 
@@ -89,22 +133,21 @@ fn log_to_file(message: &str) -> std::io::Result<()> {
     writeln!(file, "{}", message)
 }
 
-async fn get_links(query: &str) -> Result<ApiResponse> {
+async fn get_links(query: &str, result_count: u8) -> Result<ApiResponse> {
     let api_key = fs::read_to_string("APIKEY").context("could not read APIKEY")?;
     let search_url = "https://www.googleapis.com/youtube/v3/search";
 
     let part = "snippet";
     let item_type = "video";
-    let url = format!("{}?part={}&type={}&key={}&q={}", search_url, part, item_type, api_key, query);
+    let url = format!("{}?part={}&type={}&maxResults={}&key={}&q={}", search_url, part, item_type, result_count, api_key, query);
 
     let response = reqwest::get(&url).await?;
-
-    log_to_file(&format!("{:?}", response))?;
 
     Ok(response.json().await?)
 }
 
 const RICKROLL_URL: &str = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+const RESULT_COUNT: u8 = 10;
 
 
 async fn play_current_video(driver: &WebDriver) -> WebDriverResult<()> {
@@ -165,7 +208,7 @@ fn draw_results(
     terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
     response: Option<&ApiResponse>,
     search_input: &str,
-    selected_result: i32
+    sliding_window: &mut SlidingWindow,
     ) -> Result<()> {
 
     terminal.draw(|f| {
@@ -189,6 +232,13 @@ fn draw_results(
                 )
             .split(f.size());
 
+
+
+
+
+
+
+
         // TODO: create pagination
         if response.is_none() {
             for i in 0..results_per_page {
@@ -197,8 +247,15 @@ fn draw_results(
                 f.render_widget(result, chunks[i]);
             }
         } else {
-            for i in 0..results_per_page {
+
+            let selected_result = sliding_window.get_pos();
+            let l = sliding_window.l;
+            let r = sliding_window.r;
+
+            for i in l..=r {
+                let i = i as usize;
                 let response = response.unwrap();
+                // println!("JOE: {} MAMA: {:?}", i, response.items.len());
                 let item = response.items.get(i).unwrap();
                 let title = item.snippet.title.clone();
 
@@ -211,11 +268,11 @@ fn draw_results(
                 let result = Paragraph::new(Text::styled(title, style))
                     .block(Block::default().title("Result").borders(Borders::ALL));
 
-                f.render_widget(result, chunks[i]);
+
+                f.render_widget(result, chunks[i - l as usize]);
             }
         }
 
-         // Draw search input block
         let search_block = Paragraph::new(search_input)
             .block(Block::default().title("Search").borders(Borders::ALL));
 
@@ -235,15 +292,18 @@ enum Mode {
 async fn main() -> Result<()> {
 
     let mut terminal = setup_terminal()?;
+
+    terminal.clear()?;
+
+
     let mut search_input = String::new();
     let mut result: ApiResponse;
     let mut response: Option<&ApiResponse> = None;
+    let mut sliding_window = SlidingWindow::new(0, 4, 0, RESULT_COUNT as i8);
 
-    draw_results(&mut terminal, None, &search_input, -1)?;
+    draw_results(&mut terminal, None, &search_input, &mut sliding_window)?;
     let mut mode = Mode::Normal;
-    let mut selected_result = -1;
     let mut event_ocurred: bool;
-    let mut event: Event;
 
     // game loop
     loop {
@@ -265,13 +325,13 @@ async fn main() -> Result<()> {
                     }
                     //down
                     KeyCode::Char('j') => {
-                        selected_result = (selected_result + 1) % 5;
-                        draw_results(&mut terminal, response, &search_input, selected_result)?;
+                        sliding_window.next();
+                        draw_results(&mut terminal, response, &search_input, &mut sliding_window)?;
                     }
                     //up
                     KeyCode::Char('k') => {
-                        selected_result = (selected_result - 1) % 5;
-                        draw_results(&mut terminal, response, &search_input, selected_result)?;
+                        sliding_window.prev();
+                        draw_results(&mut terminal, response, &search_input, &mut sliding_window)?;
                     }
                     _ => {}
                 }
@@ -282,18 +342,18 @@ async fn main() -> Result<()> {
                     }
                     KeyCode::Backspace => {
                         search_input.pop();
-                        draw_results(&mut terminal, response, &search_input, selected_result)?;
+                        draw_results(&mut terminal, response, &search_input, &mut sliding_window)?;
                     }
                     KeyCode::Enter => {
-                        result = get_links(&search_input).await?;
+                        result = get_links(&search_input, RESULT_COUNT).await?;
 
                         response = Some(&result);
 
-                        draw_results(&mut terminal, response, &search_input, selected_result)?;
+                        draw_results(&mut terminal, response, &search_input, &mut sliding_window)?;
                     }
                     KeyCode::Char(c) => {
                         search_input.push(c);
-                        draw_results(&mut terminal, response, &search_input, selected_result)?;
+                        draw_results(&mut terminal, response, &search_input, &mut sliding_window)?;
                     }
                     _ => {}
                 }
