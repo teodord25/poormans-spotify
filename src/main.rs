@@ -169,9 +169,12 @@ async fn start_browser() -> Result<WebDriver> {
     Ok(driver)
 }
 
+// TODO: add unhook and stuff to "strip" ff
 async fn add_extension(driver: &WebDriver) -> Result<()> {
     let tools = FirefoxTools::new(driver.handle.clone());
     tools.install_addon("/home/bane/Downloads/ublock_origin-1.49.2.xpi", Some(true)).await.unwrap();
+
+    tools.install_addon("/home/bane/Downloads/unhook-1.6.2.xpi", Some(true)).await.unwrap();
     Ok(())
 }
 
@@ -285,7 +288,6 @@ async fn main() -> Result<()> {
     let mut terminal = setup_terminal()?;
 
     terminal.clear()?;
-
 
     let mut search_input = String::new();
     let mut result: ApiResponse;
