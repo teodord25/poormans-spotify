@@ -168,7 +168,7 @@ async fn start_browser() -> Result<WebDriver> {
     Ok(driver)
 }
 
-// TODO: add unhook and stuff to "strip" ff
+// TODO: somehow enable unhook
 async fn add_extension(driver: &WebDriver) -> Result<()> {
     let tools = FirefoxTools::new(driver.handle.clone());
     tools.install_addon("/home/bane/Downloads/ublock_origin-1.49.2.xpi", Some(true)).await.unwrap();
@@ -300,6 +300,8 @@ async fn main() -> Result<()> {
     let driver = start_browser().await?;
     add_extension(&driver).await?;
     driver.close_window().await?;
+    let windows = driver.windows().await?;
+    driver.switch_to_window(windows[0].clone()).await?;
 
     // game loop
     loop {
@@ -343,6 +345,8 @@ async fn main() -> Result<()> {
                             let i = sliding_window.get_pos() as usize;
                             let video_id = response.unwrap().items.get(i).unwrap().id.videoId.clone();
                             let link = format!("https://www.youtube.com/watch?v={}", &video_id);
+
+                            println!("LINK: {}", link);
 
                             open_link(&driver, &link).await?;
                         }
