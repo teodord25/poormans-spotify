@@ -299,6 +299,7 @@ async fn main() -> Result<()> {
 
     let driver = start_browser().await?;
     add_extension(&driver).await?;
+    driver.close_window().await?;
 
     // game loop
     loop {
@@ -312,6 +313,11 @@ async fn main() -> Result<()> {
         match event::read()? {
             Event::Key(key_event) => match mode {
                 Mode::Normal => match key_event.code {
+                    // refresh screen
+                    KeyCode::Esc => {
+                        terminal.clear()?;
+                        draw_results(&mut terminal, response, &search_input, &mut sliding_window)?;
+                    }
                     KeyCode::Char('q') => {
                         break;
                     }
@@ -333,8 +339,7 @@ async fn main() -> Result<()> {
                         println!("CONFIRM SELECTION INNIT POS {}", sliding_window.get_pos());
                         draw_results(&mut terminal, response, &search_input, &mut sliding_window)?;
 
-
-                        if sliding_window.get_pos() > 0 && sliding_window.get_pos() < RESULT_COUNT as i8 {
+                        if sliding_window.get_pos() >= 0 && sliding_window.get_pos() < RESULT_COUNT as i8 {
                             let i = sliding_window.get_pos() as usize;
                             let video_id = response.unwrap().items.get(i).unwrap().id.videoId.clone();
                             let link = format!("https://www.youtube.com/watch?v={}", &video_id);
