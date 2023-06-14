@@ -171,9 +171,8 @@ async fn start_browser() -> Result<WebDriver> {
 // TODO: somehow enable unhook
 async fn add_extension(driver: &WebDriver) -> Result<()> {
     let tools = FirefoxTools::new(driver.handle.clone());
-    tools.install_addon("/home/bane/Downloads/ublock_origin-1.49.2.xpi", Some(true)).await.unwrap();
-
-    tools.install_addon("/home/bane/Downloads/youtube_recommended_videos-1.6.2.xpi", Some(true)).await.unwrap();
+    tools.install_addon("/home/bane/git/poormans-spotify/addons/ublock.xpi", Some(true)).await.unwrap();
+    tools.install_addon("/home/bane/git/poormans-spotify/addons/unhook.xpi", Some(true)).await.unwrap();
     Ok(())
 }
 
@@ -338,15 +337,12 @@ async fn main() -> Result<()> {
                     }
                     // CONFIRM SELECTION INNIT
                     KeyCode::Enter => {
-                        println!("CONFIRM SELECTION INNIT POS {}", sliding_window.get_pos());
                         draw_results(&mut terminal, response, &search_input, &mut sliding_window)?;
 
                         if sliding_window.get_pos() >= 0 && sliding_window.get_pos() < RESULT_COUNT as i8 {
                             let i = sliding_window.get_pos() as usize;
                             let video_id = response.unwrap().items.get(i).unwrap().id.videoId.clone();
                             let link = format!("https://www.youtube.com/watch?v={}", &video_id);
-
-                            println!("LINK: {}", link);
 
                             open_link(&driver, &link).await?;
                         }
