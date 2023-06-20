@@ -151,59 +151,22 @@ async fn get_links(query: &str, result_count: u8) -> Result<ApiResponse> {
 const RICKROLL_URL: &str = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
 const RESULT_COUNT: u8 = 10;
 
-
+// probably redundant now
 async fn play_current_video(driver: &WebDriver) -> WebDriverResult<()> {
-    sleep(Duration::from_secs(2)).await;
-
-    // mute video to circumvent autoplay restrictions
-    let mute_script = r#"
-        var video = document.querySelector("video");
-        if (video) {
-            video.muted = true;
-        }
-    "#;
-    // driver.execute(mute_script, vec![]).await?;
-
-    sleep(Duration::from_secs(1)).await;
-    println!("bruhing");
-
     let play_script = r#"
         var playButton = document.querySelector(".ytp-play-button");
         if (playButton) {
             playButton.click();
-            playButton.click();
-            playButton.click();
-            playButton.click();
-            playButton.click();
-            playButton.click();
-            playButton.click();
-            playButton.click();
-            playButton.click();
-            playButton.click();
-            playButton.click();
-            playButton.click();
-            playButton.click();
         }
     "#;
     // driver.execute(play_script, vec![]).await?;
-
-    sleep(Duration::from_secs(2)).await;
-
-    let unmute_script = r#"
-        var video = document.querySelector("video");
-        if (video) {
-            video.muted = false;
-        }
-    "#;
-    driver.execute(unmute_script, vec![]).await?;
+    
     Ok(())
 }
 
 
 
 async fn start_browser() -> Result<WebDriver> {
-
-    let mut caps = DesiredCapabilities::firefox();
     let mut firefox_capabilities = FirefoxCapabilities::new();
 
     // LETS GO
