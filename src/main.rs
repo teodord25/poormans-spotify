@@ -1,6 +1,6 @@
+use serde_json::Value;
 use anyhow::{Context, Result};
-use serde_json::ser::PrettyFormatter;
-use std::{ io, thread, time::Duration, fs, vec };
+use std::{ io, thread, time::{Duration, self}, fs, vec };
 use tui::{
     backend::CrosstermBackend,
     widgets::{Widget, Block, Borders},
@@ -12,15 +12,18 @@ use tui::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use serde::Deserialize;
+use serde_json::json;
 use reqwest::Error;
 use thirtyfour::prelude::*;
 use thirtyfour::extensions::addons::firefox::FirefoxTools;
+use thirtyfour::Capabilities;
+use thirtyfour::FirefoxCapabilities;
 use tui::{
     text::Text,
     widgets::Paragraph,
     style::{Color, Style},
 };
-use tokio::{self, select};
+use tokio::{self, select, time::sleep};
 
 use std::fs::OpenOptions;
 use std::io::prelude::*;
@@ -150,20 +153,65 @@ const RESULT_COUNT: u8 = 10;
 
 
 async fn play_current_video(driver: &WebDriver) -> WebDriverResult<()> {
-    let script = r#"
+    sleep(Duration::from_secs(2)).await;
+
+    // mute video to circumvent autoplay restrictions
+    let mute_script = r#"
         var video = document.querySelector("video");
         if (video) {
-            video.play();
+            video.muted = true;
         }
     "#;
-    driver.execute(script, vec![]).await?;
+    // driver.execute(mute_script, vec![]).await?;
+
+    sleep(Duration::from_secs(1)).await;
+    println!("bruhing");
+
+    let play_script = r#"
+        var playButton = document.querySelector(".ytp-play-button");
+        if (playButton) {
+            playButton.click();
+            playButton.click();
+            playButton.click();
+            playButton.click();
+            playButton.click();
+            playButton.click();
+            playButton.click();
+            playButton.click();
+            playButton.click();
+            playButton.click();
+            playButton.click();
+            playButton.click();
+            playButton.click();
+        }
+    "#;
+    // driver.execute(play_script, vec![]).await?;
+
+    sleep(Duration::from_secs(2)).await;
+
+    let unmute_script = r#"
+        var video = document.querySelector("video");
+        if (video) {
+            video.muted = false;
+        }
+    "#;
+    driver.execute(unmute_script, vec![]).await?;
     Ok(())
 }
 
 
+
 async fn start_browser() -> Result<WebDriver> {
-    let caps = DesiredCapabilities::firefox();
-    let driver = WebDriver::new("http://localhost:4444", caps).await?;
+
+    let mut caps = DesiredCapabilities::firefox();
+    let mut firefox_capabilities = FirefoxCapabilities::new();
+
+    // LETS GO
+    firefox_capabilities.add_firefox_arg("--profile /home/bane/.mozilla/firefox/73072h9b.autoplay").unwrap();
+
+    println!("{:?}", firefox_capabilities.get_args());
+
+    let driver = WebDriver::new("http://localhost:4444", firefox_capabilities).await?;
 
     Ok(driver)
 }
@@ -179,8 +227,11 @@ async fn add_extension(driver: &WebDriver) -> Result<()> {
 // default port is 4444, must start selenium server with java -jar selenuimum.jar standaklonne
 // before use
 async fn open_link(driver: &WebDriver, link: &str) -> WebDriverResult<()> {
+    println!("OPPENING LINKN {:?}", time::Instant::now());
+
+
     driver.goto(link).await?;
-    play_current_video(&driver).await.unwrap();
+    // play_current_video(&driver).await.unwrap();
     Ok(())
 }
 
@@ -345,6 +396,7 @@ async fn main() -> Result<()> {
                             let link = format!("https://www.youtube.com/watch?v={}", &video_id);
 
                             open_link(&driver, &link).await?;
+                            play_current_video(&driver).await?;
                         }
                     }
                     _ => {}
