@@ -1,4 +1,5 @@
-use serde_json::Value;
+use thirtyfour::common::capabilities::firefox::FirefoxPreferences;
+use serde_json::{Value, to_value};
 use anyhow::{Context, Result};
 use std::{ io, thread, time::{Duration, self}, fs, vec };
 use tui::{
@@ -14,7 +15,7 @@ use tui::{
 use serde::Deserialize;
 use serde_json::json;
 use reqwest::Error;
-use thirtyfour::prelude::*;
+use thirtyfour::{prelude::*, CapabilitiesHelper};
 use thirtyfour::extensions::addons::firefox::FirefoxTools;
 use thirtyfour::Capabilities;
 use thirtyfour::FirefoxCapabilities;
@@ -159,6 +160,7 @@ async fn play_current_video(driver: &WebDriver) -> WebDriverResult<()> {
             playButton.click();
         }
     "#;
+
     // driver.execute(play_script, vec![]).await?;
     
     Ok(())
@@ -169,9 +171,27 @@ async fn play_current_video(driver: &WebDriver) -> WebDriverResult<()> {
 async fn start_browser() -> Result<WebDriver> {
     let mut firefox_capabilities = FirefoxCapabilities::new();
 
+    // TODO: --headless might be cool
     // LETS GO
-    firefox_capabilities.add_firefox_arg("--profile /home/bane/.mozilla/firefox/73072h9b.autoplay").unwrap();
+    // firefox_capabilities.add_firefox_arg("--profile /home/bane/.mozilla/firefox/73072h9b.autoplay").unwrap();
+    // firefox_capabilities.add_firefox_arg("--profile /home/bane/.cache/mozilla/firefox/73072h9b.autoplay").unwrap();
+    // firefox_capabilities.add_firefox_arg("-P autoplay").unwrap();
+    // firefox_capabilities.add_subkey("moz:firefoxOptions", "-P", "autoplay").unwrap();
+    // firefox_capabilities.add_firefox_arg("--headless").unwrap();
 
+
+    let mut prefs = FirefoxPreferences::new();
+    prefs.set("media.autoplay.default", 0).unwrap();
+    firefox_capabilities.set_preferences(prefs).unwrap();
+    let mut i = 0;
+    for joe in firefox_capabilities.keys(){
+        i += 1;
+
+        println!("bruh {}", i);
+        println!("{:?}", joe);
+
+    }
+    // firefox_capabilities.
     println!("{:?}", firefox_capabilities.get_args());
 
     let driver = WebDriver::new("http://localhost:4444", firefox_capabilities).await?;
