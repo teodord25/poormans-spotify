@@ -152,21 +152,6 @@ async fn get_links(query: &str, result_count: u8) -> Result<ApiResponse> {
 const RICKROLL_URL: &str = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
 const RESULT_COUNT: u8 = 10;
 
-// probably redundant now
-async fn play_current_video(driver: &WebDriver) -> WebDriverResult<()> {
-    let play_script = r#"
-        var playButton = document.querySelector(".ytp-play-button");
-        if (playButton) {
-            playButton.click();
-        }
-    "#;
-
-    // driver.execute(play_script, vec![]).await?;
-    
-    Ok(())
-}
-
-
 // default port is 4444, must start selenium server with java -jar selenuimum.jar standaklonne
 // before use
 async fn start_browser() -> Result<WebDriver> {
@@ -177,6 +162,7 @@ async fn start_browser() -> Result<WebDriver> {
     let mut prefs = FirefoxPreferences::new();
     prefs.set("media.autoplay.default", 0).unwrap();
     firefox_capabilities.set_preferences(prefs).unwrap();
+    firefox_capabilities.add_firefox_arg("--headless").unwrap();
 
     let driver = WebDriver::new("http://localhost:4444", firefox_capabilities).await?;
 
@@ -315,6 +301,10 @@ async fn main() -> Result<()> {
     let mut event_ocurred: bool;
 
     let driver = start_browser().await?;
+
+    // sleep(Duration::from_millis(5000)).await;
+
+    // BLACK MAGIC: removing this line breaks the program
     add_extension(&driver).await?;
     driver.close_window().await?;
     let windows = driver.windows().await?;
@@ -363,7 +353,6 @@ async fn main() -> Result<()> {
                             let link = format!("https://www.youtube.com/watch?v={}", &video_id);
 
                             open_link(&driver, &link).await?;
-                            play_current_video(&driver).await?;
                         }
                     }
                     _ => {}
