@@ -1,3 +1,11 @@
+// TODO: add like a thing where it says "oooh loading / now playing / progress bar?"
+// TODO: figure out a way to accept the stupid "OMG ARE YOU STILL HERE" prompt
+
+
+
+
+
+
 use thirtyfour::common::capabilities::firefox::FirefoxPreferences;
 use serde_json::{Value, to_value};
 use anyhow::{Context, Result};
