@@ -167,38 +167,23 @@ async fn play_current_video(driver: &WebDriver) -> WebDriverResult<()> {
 }
 
 
-
+// default port is 4444, must start selenium server with java -jar selenuimum.jar standaklonne
+// before use
 async fn start_browser() -> Result<WebDriver> {
     let mut firefox_capabilities = FirefoxCapabilities::new();
 
     // TODO: --headless might be cool
-    // LETS GO
-    // firefox_capabilities.add_firefox_arg("--profile /home/bane/.mozilla/firefox/73072h9b.autoplay").unwrap();
-    // firefox_capabilities.add_firefox_arg("--profile /home/bane/.cache/mozilla/firefox/73072h9b.autoplay").unwrap();
-    // firefox_capabilities.add_firefox_arg("-P autoplay").unwrap();
-    // firefox_capabilities.add_subkey("moz:firefoxOptions", "-P", "autoplay").unwrap();
-    // firefox_capabilities.add_firefox_arg("--headless").unwrap();
-
 
     let mut prefs = FirefoxPreferences::new();
     prefs.set("media.autoplay.default", 0).unwrap();
     firefox_capabilities.set_preferences(prefs).unwrap();
-    let mut i = 0;
-    for joe in firefox_capabilities.keys(){
-        i += 1;
-
-        println!("bruh {}", i);
-        println!("{:?}", joe);
-
-    }
-    // firefox_capabilities.
-    println!("{:?}", firefox_capabilities.get_args());
 
     let driver = WebDriver::new("http://localhost:4444", firefox_capabilities).await?;
 
     Ok(driver)
 }
 
+// I don't need unhook if I'm gonna go full headless innit
 // TODO: somehow enable unhook
 async fn add_extension(driver: &WebDriver) -> Result<()> {
     let tools = FirefoxTools::new(driver.handle.clone());
@@ -207,8 +192,7 @@ async fn add_extension(driver: &WebDriver) -> Result<()> {
     Ok(())
 }
 
-// default port is 4444, must start selenium server with java -jar selenuimum.jar standaklonne
-// before use
+// also brobably redundant now
 async fn open_link(driver: &WebDriver, link: &str) -> WebDriverResult<()> {
     println!("OPPENING LINKN {:?}", time::Instant::now());
 
