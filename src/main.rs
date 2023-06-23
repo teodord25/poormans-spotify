@@ -188,9 +188,6 @@ async fn add_extension(driver: &WebDriver) -> Result<()> {
 
 // also brobably redundant now
 async fn open_link(driver: &WebDriver, link: &str) -> WebDriverResult<()> {
-    println!("OPPENING LINKN {:?}", time::Instant::now());
-
-
     driver.goto(link).await?;
     // play_current_video(&driver).await.unwrap();
     Ok(())
@@ -290,24 +287,24 @@ fn draw_results(
 
         f.render_widget(search_block, chunks[results_per_page]);
 
-let progress_value = 0.3;  
-let is_playing = true;  
+        let progress_value = 0.3;  
+        let is_playing = true;  
 
-let progress_bar = Gauge::default()
-    .block(
-        Block::default()
-        .borders(Borders::ALL)
-    )
-    .gauge_style(Style::default().fg(Color::White))
-    .percent((progress_value * 100.0) as u16);  // progress_value is a float between 0 and 1
+        let progress_bar = Gauge::default()
+            .block(
+                Block::default()
+                .borders(Borders::ALL)
+                )
+            .gauge_style(Style::default().fg(Color::White))
+            .percent((progress_value * 100.0) as u16);  // progress_value is a float between 0 and 1
 
-let play_pause_status = Paragraph::new(Text::styled(
-    if is_playing { "Playing" } else { "Paused" },
-    Style::default().fg(Color::White),
-)).block(Block::default().borders(Borders::ALL));
+        let play_pause_status = Paragraph::new(Text::styled(
+                if is_playing { "Playing" } else { "Paused" },
+                Style::default().fg(Color::White),
+                )).block(Block::default().borders(Borders::ALL));
 
-f.render_widget(play_pause_status, chunks[results_per_page + 1]);
-f.render_widget(progress_bar, chunks[results_per_page + 2]);
+        f.render_widget(play_pause_status, chunks[results_per_page + 1]);
+        f.render_widget(progress_bar, chunks[results_per_page + 2]);
     })?;
     Ok(())
 }
