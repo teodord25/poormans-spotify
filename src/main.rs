@@ -12,7 +12,7 @@ use anyhow::{Context, Result};
 use std::{ io, thread, time::{Duration, self}, fs, vec };
 use tui::{
     backend::CrosstermBackend,
-    widgets::{Widget, Block, Borders},
+    widgets::{Widget, Block, Borders, Gauge},
     layout::{Constraint, Direction, Layout},
     Terminal
 }; use crossterm::{
@@ -234,15 +234,23 @@ fn draw_results(
         let results_per_page = 5;
         let result_height = 10;
 
+        let mut constraints = vec![Constraint::Percentage(result_height); results_per_page];
+        constraints.push(
+            Constraint::Percentage(10),     // search bar
+        );
+
+        constraints.push(
+            Constraint::Min(0)              // playing :o
+        );
+
+        constraints.push(
+            Constraint::Percentage(5),      // progress bar
+        );
+
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .margin(1)
-            .constraints(
-                vec!
-                [
-                    Constraint::Percentage(result_height); results_per_page + 1
-                ].as_ref()
-                )
+            .constraints(constraints.as_ref())
             .split(f.size());
 
         if response.is_none() {
@@ -280,8 +288,26 @@ fn draw_results(
         let search_block = Paragraph::new(search_input)
             .block(Block::default().title("Search").borders(Borders::ALL));
 
-        f.render_widget(search_block, chunks[chunks.len() - 1]);
+        f.render_widget(search_block, chunks[results_per_page]);
 
+let progress_value = 0.3;  
+let is_playing = true;  
+
+let progress_bar = Gauge::default()
+    .block(
+        Block::default()
+        .borders(Borders::ALL)
+    )
+    .gauge_style(Style::default().fg(Color::White))
+    .percent((progress_value * 100.0) as u16);  // progress_value is a float between 0 and 1
+
+let play_pause_status = Paragraph::new(Text::styled(
+    if is_playing { "Playing" } else { "Paused" },
+    Style::default().fg(Color::White),
+)).block(Block::default().borders(Borders::ALL));
+
+f.render_widget(play_pause_status, chunks[results_per_page + 1]);
+f.render_widget(progress_bar, chunks[results_per_page + 2]);
     })?;
     Ok(())
 }
