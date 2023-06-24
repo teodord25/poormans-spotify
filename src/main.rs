@@ -1,9 +1,6 @@
 // TODO: add like a thing where it says "oooh loading / now playing / progress bar?"
-// TODO: figure out a way to accept the stupid "OMG ARE YOU STILL HERE" prompt
-
-
-
-
+// TODO: figure out a way to accept the "OMG ARE YOU STILL HERE" prompt
+// TODO: actually I think I need the ublock back
 
 
 use thirtyfour::common::capabilities::firefox::FirefoxPreferences;
@@ -165,8 +162,6 @@ const RESULT_COUNT: u8 = 10;
 async fn start_browser() -> Result<WebDriver> {
     let mut firefox_capabilities = FirefoxCapabilities::new();
 
-    // TODO: --headless might be cool
-
     let mut prefs = FirefoxPreferences::new();
     prefs.set("media.autoplay.default", 0).unwrap();
     firefox_capabilities.set_preferences(prefs).unwrap();
@@ -177,8 +172,6 @@ async fn start_browser() -> Result<WebDriver> {
     Ok(driver)
 }
 
-// I don't need unhook if I'm gonna go full headless innit
-// TODO: somehow enable unhook
 async fn add_extension(driver: &WebDriver) -> Result<()> {
     let tools = FirefoxTools::new(driver.handle.clone());
     tools.install_addon("/home/bane/git/poormans-spotify/addons/ublock.xpi", Some(true)).await.unwrap();
@@ -374,7 +367,6 @@ async fn main() -> Result<()> {
                         sliding_window.prev();
                         draw_results(&mut terminal, response, &search_input, &mut sliding_window)?;
                     }
-                    // CONFIRM SELECTION INNIT
                     KeyCode::Enter => {
                         draw_results(&mut terminal, response, &search_input, &mut sliding_window)?;
 
