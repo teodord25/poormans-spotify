@@ -4,12 +4,11 @@
 
 
 use thirtyfour::common::capabilities::firefox::FirefoxPreferences;
-use serde_json::{Value, to_value};
 use anyhow::{Context, Result};
-use std::{ io, thread, time::{Duration, self}, fs, vec };
+use std::{ io, time::Duration, fs, vec };
 use tui::{
     backend::CrosstermBackend,
-    widgets::{Widget, Block, Borders, Gauge},
+    widgets::{Block, Borders, Gauge},
     layout::{Constraint, Direction, Layout},
     Terminal
 }; use crossterm::{
@@ -18,18 +17,15 @@ use tui::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use serde::Deserialize;
-use serde_json::json;
-use reqwest::Error;
-use thirtyfour::{prelude::*, CapabilitiesHelper};
+use thirtyfour::prelude::*;
 use thirtyfour::extensions::addons::firefox::FirefoxTools;
-use thirtyfour::Capabilities;
 use thirtyfour::FirefoxCapabilities;
 use tui::{
     text::Text,
     widgets::Paragraph,
     style::{Color, Style},
 };
-use tokio::{self, select, time::sleep};
+use tokio;
 
 use std::fs::OpenOptions;
 use std::io::prelude::*;
@@ -175,14 +171,11 @@ async fn start_browser() -> Result<WebDriver> {
 async fn add_extension(driver: &WebDriver) -> Result<()> {
     let tools = FirefoxTools::new(driver.handle.clone());
     tools.install_addon("/home/bane/git/poormans-spotify/addons/ublock.xpi", Some(true)).await.unwrap();
-    tools.install_addon("/home/bane/git/poormans-spotify/addons/unhook.xpi", Some(true)).await.unwrap();
     Ok(())
 }
 
-// also brobably redundant now
 async fn open_link(driver: &WebDriver, link: &str) -> WebDriverResult<()> {
     driver.goto(link).await?;
-    // play_current_video(&driver).await.unwrap();
     Ok(())
 }
 
@@ -326,10 +319,9 @@ async fn main() -> Result<()> {
 
     let driver = start_browser().await?;
 
-    // sleep(Duration::from_millis(5000)).await;
-
-    // BLACK MAGIC: removing this line breaks the program
-    add_extension(&driver).await?;
+    
+    add_extension(&driver).await?; // BLACK MAGIC: removing this line breaks the program
+                                   
     driver.close_window().await?;
     let windows = driver.windows().await?;
     driver.switch_to_window(windows[0].clone()).await?;
