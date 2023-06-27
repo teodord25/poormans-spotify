@@ -1,7 +1,10 @@
 // TODO: add like a thing where it says "oooh loading / now playing / progress bar?"
 // TODO: figure out a way to accept the "OMG ARE YOU STILL HERE" prompt
 // TODO: actually I think I need the ublock back
+// TODO: pub pub D:
 
+mod api_stuff;
+use api_stuff::ApiResponse;
 
 use thirtyfour::common::capabilities::firefox::FirefoxPreferences;
 use anyhow::{Context, Result};
@@ -16,7 +19,6 @@ use tui::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use serde::Deserialize;
 use thirtyfour::prelude::*;
 use thirtyfour::extensions::addons::firefox::FirefoxTools;
 use thirtyfour::FirefoxCapabilities;
@@ -31,58 +33,6 @@ use std::fs::OpenOptions;
 use std::io::prelude::*;
 
 
-#[derive(Deserialize, Debug)]
-struct ApiResponse {
-    kind: String,
-    etag: String,
-    nextPageToken: String,
-    regionCode: String,
-    pageInfo: PageInfo,
-    items: Vec<Item>,
-}
-
-#[derive(Deserialize, Debug)]
-struct PageInfo {
-    totalResults: u32,
-    resultsPerPage: u8,
-}
-
-#[derive(Deserialize, Debug)]
-struct Item {
-    kind: String,
-    etag: String,
-    id: Id,
-    snippet: Snippet,
-}
-
-#[derive(Deserialize, Debug)]
-struct Snippet {
-    publishedAt: String,
-    channelId: String,
-    title: String,
-    description: String,
-    thumbnails: Thumbnails,
-    channelTitle: String,
-    liveBroadcastContent: String,
-    publishTime: String,
-}
-
-#[derive(Deserialize, Debug)]
-struct Thumbnails {
-    default: Thumbnail,
-    medium: Thumbnail,
-    high: Thumbnail,
-}
-
-#[derive(Deserialize, Debug)]
-struct Thumbnail {
-    url: String,
-}
-
-#[derive(Deserialize, Debug)]
-struct Id {
-    videoId: String,
-}
 
 struct SlidingWindow {
     l: i8,
@@ -170,8 +120,8 @@ async fn start_browser() -> Result<WebDriver> {
 
 async fn add_extension(driver: &WebDriver) -> Result<()> {
     let tools = FirefoxTools::new(driver.handle.clone());
-    tools.install_addon("/home/bane/git/poormans-spotify/addons/ublock.xpi", Some(true)).await.unwrap();
-    tools.install_addon("/home/bane/git/poormans-spotify/addons/unhook.xpi", Some(true)).await.unwrap();
+    tools.install_addon("/home/bane/git/poormans-spotify/addons/ublock.xpi", Some(true)).await?;
+    tools.install_addon("/home/bane/git/poormans-spotify/addons/unhook.xpi", Some(true)).await?;
     Ok(())
 }
 
