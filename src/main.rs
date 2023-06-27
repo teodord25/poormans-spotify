@@ -171,6 +171,7 @@ async fn start_browser() -> Result<WebDriver> {
 async fn add_extension(driver: &WebDriver) -> Result<()> {
     let tools = FirefoxTools::new(driver.handle.clone());
     tools.install_addon("/home/bane/git/poormans-spotify/addons/ublock.xpi", Some(true)).await.unwrap();
+    tools.install_addon("/home/bane/git/poormans-spotify/addons/unhook.xpi", Some(true)).await.unwrap();
     Ok(())
 }
 
